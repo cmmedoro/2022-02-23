@@ -6,6 +6,7 @@ package it.polito.tdp.yelp;
 
 import java.net.URL;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.ResourceBundle;
 
@@ -48,18 +49,63 @@ public class FXMLController {
     	this.cmbLocale.getItems().clear();
     	String citta = this.cmbCitta.getValue();
     	if(citta != null) {
-    		//TODO popolare la tendina dei locali per la città selezionata
-    		
+    		List<Business> temp = this.model.getBusinessesCity(citta);
+    		Collections.sort(temp);
+    		this.cmbLocale.getItems().addAll(temp);
     	}
     }
 
     @FXML
     void doCreaGrafo(ActionEvent event) {
-    	
+    	this.txtResult.clear();
+    	//controllo sugli input
+    	String citta = this.cmbCitta.getValue();
+    	if(citta == null) {
+    		this.txtResult.setText("Devi prima selezionare una città");
+    		return;
+    	}
+    	Business locale = this.cmbLocale.getValue();
+    	if(locale == null) {
+    		this.txtResult.setText("Devi prima selezionare un locale");
+    		return;
+    	}
+    	//se sono qui posso proseguire con la creazione del grafo
+    	this.model.creaGrafo(citta, locale);
+    	this.txtResult.setText("Grafo creato: "+this.model.nVertices()+" vertici, "+this.model.nArchi()+" archi.\n\n");
+    	//trovare vertice/i per cui numero di archi uscenti è massimo
+    	List<Review> temp = this.model.getMaxDegreeOf();
+    	for(Review r : temp) {
+    		this.txtResult.appendText(r.getReviewId()+ "     #ARCHI USCENTI: "+this.model.maxDegree());
+    	}
     }
 
     @FXML
     void doTrovaMiglioramento(ActionEvent event) {
+    	this.txtResult.clear();
+    	String citta = this.cmbCitta.getValue();
+    	if(citta == null) {
+    		this.txtResult.setText("Devi prima selezionare una città");
+    		return;
+    	}
+    	Business locale = this.cmbLocale.getValue();
+    	if(locale == null) {
+    		this.txtResult.setText("Devi prima selezionare un locale");
+    		return;
+    	}
+    	if(!this.model.isGraphCreated()) {
+    		this.txtResult.setText("Devi prima creare il grafo");
+    		return;
+    	}
+    	//se sono qui posso proseguire con la ricorsione
+    	List<Review> percorso = this.model.cercaMiglioramento();
+    	if(percorso.size() == 0) {
+    		this.txtResult.setText("Non è stato trovato alcun percorso");
+    	}
+    	this.txtResult.setText("Percorso trovato: \n");
+    	for(Review r : percorso) {
+    		this.txtResult.appendText(r.getReviewId()+" - "+r.getDate()+"\n");
+    	}
+    	this.txtResult.appendText("Numero giorni coperti: "+this.model.getDiffGiorni()+"\n");
     	
     }
 
@@ -75,5 +121,7 @@ public class FXMLController {
     
     public void setModel(Model model) {
     	this.model = model;
+    	this.cmbCitta.getItems().clear();
+    	this.cmbCitta.getItems().addAll(this.model.getAllCities());
     }
 }
